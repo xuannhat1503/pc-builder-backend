@@ -8,6 +8,9 @@ import com.backend.repository.CrawledPriceRepository;
 import com.backend.service.CrawledPriceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -35,6 +38,15 @@ public class CrawledPriceServiceImpl implements CrawledPriceService {
 
     private final CrawledPriceRepository repository;
     private final BaseComponentRepository baseComponentRepository;
+
+    @EventListener(ApplicationReadyEvent.class)
+    @Transactional
+    public void normalizeInvalidCrawledAtValuesOnStartup() {
+        int updatedRows = repository.normalizeInvalidCrawledAtValues();
+        if (updatedRows > 0) {
+            System.out.println("[CrawledPrice] Normalized invalid crawled_at rows: " + updatedRows);
+        }
+    }
 
     @Override
     public List<CrawledPrice> findAll() {
