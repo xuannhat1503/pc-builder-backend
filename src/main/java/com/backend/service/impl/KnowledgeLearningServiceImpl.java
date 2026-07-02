@@ -89,10 +89,19 @@ public class KnowledgeLearningServiceImpl implements KnowledgeLearningService {
 
     private String buildQuery(String keyword, String userQuestion) {
         String question = userQuestion == null ? "" : userQuestion.trim();
-        if (!keyword.isBlank()) {
+        if (!keyword.isBlank() && !isGenericKeyword(keyword)) {
             return keyword;
         }
         return question;
+    }
+
+    private boolean isGenericKeyword(String keyword) {
+        String normalized = normalize(keyword);
+        return normalized.isBlank()
+                || normalized.equals("game")
+                || normalized.equals("gaming")
+                || normalized.equals("general")
+                || normalized.equals("purpose");
     }
 
     private String extractSourceUrl(SearchResponse searchResponse, String keyword) {

@@ -648,7 +648,13 @@ public class AssistantEngineServiceImpl implements AssistantEngineService {
                 }
             }
         }
-        return text.replaceAll("(?i)build|pc|bo may|bộ máy|bộ pc|choi duoc|chơi được", "").trim();
+            String cleaned = text
+                .replaceAll("(?i)^game\\s+", "")
+                .replaceAll("(?i)\\b(có chơi được không|co choi duoc khong|chơi được không|choi duoc khong|có build được không|co build duoc khong|build được không|build duoc khong|cấu hình tối thiểu|cau hinh toi thieu|minimum requirement|system requirement|recommended requirement|cấu hình đề nghị|cau hinh de nghi)\\b.*$", "")
+                .replaceAll("(?i)\\b(build|pc|bo may|bộ máy|bộ pc|choi duoc|chơi được)\\b", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+            return cleaned.isBlank() ? text.trim() : cleaned;
     }
 
     private String normalizeKeyword(String value) {
