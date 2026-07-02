@@ -21,8 +21,7 @@ public interface CrawledPriceRepository extends JpaRepository<CrawledPrice, Long
             UPDATE crawled_prices
             SET crawled_at = CURRENT_TIMESTAMP
             WHERE crawled_at IS NULL
-               OR crawled_at = '0000-00-00 00:00:00'
-               OR crawled_at = '0000-00-00 00:00:00.000000'
+               OR crawled_at < '1000-01-01 00:00:00'
             """, nativeQuery = true)
     int normalizeInvalidCrawledAtValues();
 }

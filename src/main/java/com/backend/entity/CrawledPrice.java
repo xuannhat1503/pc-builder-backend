@@ -10,7 +10,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import org.hibernate.annotations.ColumnTransformer;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -40,7 +39,6 @@ public class CrawledPrice {
     @Column(name = "price_value", nullable = false, precision = 12, scale = 2)
     private BigDecimal priceValue;
 
-    @ColumnTransformer(read = "nullif(crawled_at, '0000-00-00 00:00:00')")
     @Column(name = "crawled_at", nullable = false)
     private LocalDateTime crawledAt;
 }
