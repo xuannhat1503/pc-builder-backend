@@ -443,10 +443,42 @@ public class AssistantEngineServiceImpl implements AssistantEngineService {
                 return keyword;
             }
         }
+        String extractedTitle = extractAppOrGameTitle(text);
+        if (!extractedTitle.isBlank()) {
+            return extractedTitle;
+        }
         if (purpose != null && !purpose.isBlank()) {
             return purpose;
         }
         return message == null ? "" : message.trim();
+    }
+
+    private String extractAppOrGameTitle(String text) {
+        if (text == null || text.isBlank()) {
+            return "";
+        }
+
+        String normalized = text
+                .replaceAll("(?i)^(build|laptop|pc|bo pc|bộ pc|build pc|build laptop|build may|build máy)\\s+", "")
+                .replaceAll("(?i)^(cho|choi|chơi|play|run|chay|chạy|for)\\s+", "")
+                .replaceAll("(?i)\\b(có chơi được không|co choi duoc khong|chơi được không|choi duoc khong|có build được không|co build duoc khong|build được không|build duoc khong|cấu hình tối thiểu|cau hinh toi thieu|minimum requirement|system requirement|recommended requirement|cấu hình đề nghị|cau hinh de nghi)\\b.*$", "")
+                .replaceAll("(?i)\\b(phù hợp|phu hop|hợp với|hop voi|để|de)\\b.*$", "")
+                .replaceAll("[?.!]+$", "")
+                .trim();
+
+        if (normalized.isBlank()) {
+            return "";
+        }
+
+        String candidate = normalized
+                .replaceAll("(?i)^(build|pc|game|app|application|software|program|tool|app mới|game mới)\\s+", "")
+                .replaceAll("\\s+", " ")
+                .trim();
+
+        if (candidate.length() < 3) {
+            return "";
+        }
+        return candidate;
     }
 
     private void learnKnowledgeIfNeeded(String keyword, String category, String message, String conversationContext) {
@@ -454,7 +486,9 @@ public class AssistantEngineServiceImpl implements AssistantEngineService {
             return;
         }
         try {
-            knowledgeLearningService.learn(keyword, category, message, conversationContext);
+            var savedKnowledge = knowledgeLearningService.learn(keyword, category, message, conversationContext);
+            log.info("[Knowledge] Learned keyword={} category={} id={} title={}",
+                    savedKnowledge.keyword(), savedKnowledge.category(), savedKnowledge.id(), savedKnowledge.title());
         } catch (Exception exception) {
             log.warn("[Knowledge] Learning skipped for keyword={} category={}", keyword, category, exception);
         }

@@ -29,8 +29,9 @@ public class KnowledgeLearningServiceImpl implements KnowledgeLearningService {
     public KnowledgeBaseResponse learn(String keyword, String category, String userQuestion, String conversationContext) {
         String normalizedKeyword = normalize(keyword);
         String normalizedCategory = normalize(category);
+        String normalizedQuestion = normalize(userQuestion);
 
-        log.info("[Knowledge] Searching...");
+        log.info("[Knowledge] Searching keyword={} category={}", normalizedKeyword, normalizedCategory);
         Optional<KnowledgeBaseResponse> cached = knowledgeBaseService.findByKeyword(normalizedKeyword);
         if (cached.isEmpty()) {
             cached = knowledgeBaseService.findMostRelevant(normalizedKeyword, normalizedCategory);
@@ -61,17 +62,40 @@ public class KnowledgeLearningServiceImpl implements KnowledgeLearningService {
         log.info("[Knowledge] Internet search finished");
 
         if (searchResponse == null || !searchResponse.hasResults()) {
-            throw new IllegalStateException("[Knowledge] No internet results found for keyword=" + normalizedKeyword);
+            if (!normalizedQuestion.isBlank() && !normalizedQuestion.equals(request.query())) {
+                log.info("[Knowledge] Retrying search with full question query");
+                SearchRequest fallbackRequest = new SearchRequest(
+                        normalizedQuestion,
+                        "advanced",
+                        "general",
+                        5,
+                        Boolean.TRUE,
+                        Boolean.TRUE,
+                        Boolean.FALSE
+                );
+                try {
+                    searchResponse = tavilySearchService.search(fallbackRequest);
+                } catch (TavilyClientException exception) {
+                    log.error("[Knowledge] Fallback internet search failed", exception);
+                    throw exception;
+                }
+                log.info("[Knowledge] Fallback internet search finished");
+            }
+        }
+
+        if (searchResponse == null || !searchResponse.hasResults()) {
+            throw new IllegalStateException("[Knowledge] No internet results found for keyword=" + normalizedKeyword + " question=" + normalizedQuestion);
         }
 
         String summary = knowledgeSummaryService.summarize(userQuestion, normalizedKeyword, normalizedCategory, searchResponse);
         log.info("[Knowledge] Claude summary finished");
 
         String sourceUrl = extractSourceUrl(searchResponse, normalizedKeyword);
+        String title = buildTitle(normalizedKeyword);
         KnowledgeBaseRequest saveRequest = new KnowledgeBaseRequest(
                 normalizedKeyword,
                 normalizedCategory,
-                buildTitle(normalizedKeyword),
+            title,
                 summary,
                 sourceUrl
         );
@@ -83,6 +107,9 @@ public class KnowledgeLearningServiceImpl implements KnowledgeLearningService {
         if (verified.id() == null || !verified.id().equals(saved.id())) {
             throw new IllegalStateException("[Knowledge] Save verification mismatch for keyword=" + normalizedKeyword);
         }
+
+        log.info("[Knowledge] Saved keyword={} category={} id={} sourceUrl={}",
+                verified.keyword(), verified.category(), verified.id(), verified.sourceUrl());
 
         return verified;
     }
